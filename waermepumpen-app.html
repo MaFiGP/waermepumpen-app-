@@ -1,0 +1,134 @@
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Wärmepumpen-Beratung</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 1rem; background: #f4f4f4; color: #333; }
+    h1 { text-align: center; }
+    .logo { display: block; margin: 0 auto 1rem auto; max-height: 60px; }
+    .card {
+      background: white; border-radius: 8px; padding: 1rem; margin: 1rem 0;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    textarea, input, select {
+      width: 100%; margin-top: 0.5rem; font-size: 1rem; padding: 0.4rem;
+    }
+    .btn {
+      background: #007bff; color: white; padding: 0.6rem 1rem;
+      border: none; border-radius: 4px; cursor: pointer; margin: 0.5rem 0.5rem 0 0;
+    }
+    #antwortBox { margin-top: 1rem; background: #e7f1ff; padding: 1rem; border-radius: 5px; }
+  </style>
+</head>
+<body>
+  <img class="logo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Thermondo_Logo.svg/2560px-Thermondo_Logo.svg.png" alt="Thermondo Logo"/>
+
+  <h1>Wärmepumpen-Gespräch</h1>
+
+  <div class="card">
+    <h2>Gesprächsleitfaden</h2>
+    <p>Wie heizen Sie aktuell?</p><textarea id="q1"></textarea>
+    <p>Was stört Sie an Ihrer aktuellen Heizung?</p><textarea id="q2"></textarea>
+    <p>Wie wichtig ist Ihnen Unabhängigkeit von Energiepreisen?</p><textarea id="q3"></textarea>
+    <p>Wussten Sie, dass der Staat bis zu 70 % fördert?</p><textarea id="q4"></textarea>
+    <p>Wenn wir alles übernehmen – was hält Sie noch ab?</p><textarea id="q5"></textarea>
+  </div>
+
+  <div class="card">
+    <h2>Einwandbehandlung</h2>
+    <select id="einwandSelect" onchange="zeigeAntwort()">
+      <option value="">-- Einwand auswählen --</option>
+      <option value="kosten">„Das ist mir zu teuer.“</option>
+      <option value="nochfunktioniert">„Meine Heizung funktioniert doch noch.“</option>
+      <option value="unsichertechnik">„Ich bin mir bei der Technik nicht sicher.“</option>
+      <option value="förderungkompliziert">„Die Förderung ist mir zu kompliziert.“</option>
+      <option value="willnachdenken">„Ich möchte nochmal darüber nachdenken.“</option>
+    </select>
+    <div id="antwortBox"></div>
+  </div>
+
+  <div class="card">
+    <h2>Ersparnisrechner</h2>
+    <label>Gas-/Ölverbrauch pro Jahr:<br>
+      <input type="number" id="verbrauch" value="20000" />
+      <select id="einheit">
+        <option value="kwh">kWh</option>
+        <option value="liter">Liter (Öl)</option>
+      </select>
+    </label><br><br>
+    <label>Arbeitspreis aktueller Energieträger (€/kWh oder €/L):<br>
+      <input type="number" id="preis_alt" step="0.01" value="0.12" />
+    </label><br><br>
+    <label>Arbeitspreis Strom (€/kWh):<br>
+      <input type="number" id="preis_strom" step="0.01" value="0.30" />
+    </label><br><br>
+    <button class="btn" onclick="berechneErsparnis()">Berechnen</button>
+    <div id="ergebnis" style="margin-top:1rem; font-weight:bold;"></div>
+  </div>
+
+  <div class="card">
+    <button class="btn" onclick="exportPDF()">PDF Export</button>
+    <button class="btn" onclick="saveNotes()">Gespräch speichern</button>
+  </div>
+
+  <script>
+    const fragen = ['q1', 'q2', 'q3', 'q4', 'q5'];
+    window.onload = () => {
+      fragen.forEach(f => document.getElementById(f).value = localStorage.getItem(f) || '');
+    };
+    function saveNotes() {
+      fragen.forEach(f => localStorage.setItem(f, document.getElementById(f).value));
+      alert("Gespräch lokal gespeichert.");
+    }
+    function zeigeAntwort() {
+      const antworten = {
+        kosten: "Verständlich – aber genau deshalb gibt es die Förderung von bis zu 70 %.",
+        nochfunktioniert: "Jetzt tauschen heißt: mehr Förderung, keine Stress-Notlösung später.",
+        unsichertechnik: "Wärmepumpen sind bewährt, langlebig und wir übernehmen alles für Sie.",
+        förderungkompliziert: "Die Anträge übernehmen wir für Sie – komplett und ohne Aufwand.",
+        willnachdenken: "Darf ich Ihnen ein konkretes Angebot vorbereiten – ganz unverbindlich?"
+      };
+      const val = document.getElementById("einwandSelect").value;
+      document.getElementById("antwortBox").textContent = antworten[val] || "";
+    }
+    function berechneErsparnis() {
+      const verbrauch = parseFloat(document.getElementById("verbrauch").value);
+      const einheit = document.getElementById("einheit").value;
+      const preisAlt = parseFloat(document.getElementById("preis_alt").value);
+      const preisStrom = parseFloat(document.getElementById("preis_strom").value);
+      if (isNaN(verbrauch) || isNaN(preisAlt) || isNaN(preisStrom)) {
+        document.getElementById("ergebnis").innerHTML = "Bitte alle Felder korrekt ausfüllen.";
+        return;
+      }
+      let verbrauch_kwh = einheit === "liter" ? verbrauch * 10 : verbrauch;
+      const wärmebedarf = verbrauch_kwh * 0.8;
+      const stromverbrauch = wärmebedarf / 3.5;
+      const kostenAlt = verbrauch_kwh * preisAlt;
+      const kostenWP = stromverbrauch * preisStrom;
+      const ersparnis = kostenAlt - kostenWP;
+      document.getElementById("ergebnis").innerHTML = `
+        Wärmebedarf: <strong>${wärmebedarf.toFixed(0)} kWh</strong><br>
+        Stromverbrauch WP: <strong>${stromverbrauch.toFixed(0)} kWh</strong><br>
+        Kosten alt: <strong>${kostenAlt.toFixed(2)} €</strong><br>
+        Kosten WP: <strong>${kostenWP.toFixed(2)} €</strong><br>
+        <span style="color:green">Ersparnis: <strong>${ersparnis.toFixed(2)} €</strong></span>
+      `;
+    }
+    function exportPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.setFontSize(12);
+      doc.text("Wärmepumpen Gesprächsnotizen", 10, 10);
+      fragen.forEach((f, i) => {
+        const val = document.getElementById(f).value;
+        doc.text(`${i+1}. ${val}`, 10, 20 + i*10);
+      });
+      doc.save("waermepumpen-gespraech.pdf");
+    }
+  </script>
+</body>
+</html>
